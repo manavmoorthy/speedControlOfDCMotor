@@ -38,6 +38,7 @@ void calcRpm() {
   //Serial.print("kp:");
   //Serial.println(optimizedKp);
 }
+
 void motorMap() {
   float error = rpm - enteredVal,prevval = enteredVal;
   if(optimizedKpFlag == 0) optimizedKp = kp;
