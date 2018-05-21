@@ -1,97 +1,103 @@
-int count, sensor = 3;
+//declare the necessary variables
+int count, interruptSensor = nonLinearDifference, motorSensor = 9;
 double rpm;
-float val = -1, motorspeed, prevmotorspeed = -1;
-int valentered = 0;
-long time1, time2, flag = 0, maxrpm = 0, flagy = 0, x = 1, flagx = 0;
-float optkp = 0, dif = 0, kp = 0.5;
+float enteredVal = -1, motorSpeed, prevMotorSpeed = -1;
+int enteredValFlag = 0;
+long initialTime, finalTime, mapFlag = 0, maxRpm = 0, overshootKpFlag = 0, numberOfRevolutions = 1, optimizedKpFlag = 0;
+int UPPER_BOUND = 255, LOWER_BOUND = 20;
+
+//priors for the computation of proportional gain parameter
+float optimizedKp = 0, linearDifference = 0.06, kp = 1, nonLinearDifference = 3, errorFactor = 0.31875;
+
 void setup() {
   // put your setup code here, to run once:
-  pinMode(sensor, INPUT);
-  pinMode(9, OUTPUT);
+  pinMode(interruptSensor, INPUT);
+  pinMode(motorSensor, OUTPUT);
   count = 0;
-  flag = 0;
+  mapFlag = 0;
   Serial.begin(9600);
-  time1 = 0;
-  attachInterrupt(digitalPinToInterrupt(sensor), countrpm, RISING);
-  analogWrite(9,255);
+  initialTime = 0;
+  attachInterrupt(digitalPinToInterrupt(interruptSensor), countRpm, RISING);
+  analogWrite(motorSensor,255);
 }
-void countrpm() {
+
+void countRpm() {
   count++;
   //Serial.println(count);
 }
-void calcrpm() {
-  rpm = (60000 * count) / (millis() - time1);
+
+void calcRpm() {
+  rpm = (60000 * count) / (millis() - initialTime);
   count = 0;
-  time1 = millis();
-  time2 = millis();
+  initialTime = millis();
+  finalTime = millis();
   Serial.print("millis:");
-  Serial.println(time2);
+  Serial.println(finalTime);
   Serial.print("rpm:");
   Serial.println(rpm);
   //Serial.print("kp:");
-  //Serial.println(optkp);
+  //Serial.println(optimizedKp);
 }
-void motormap() {
-  float error = rpm - val,prevval = val;
-  if(flagx == 0) optkp = kp;
-  dif = 0.06; 
-  if(prevval != val){
+void motorMap() {
+  float error = rpm - enteredVal,prevval = enteredVal;
+  if(optimizedKpFlag == 0) optimizedKp = kp;
+  linearDifference = 0.06; 
+  if(prevval != enteredVal){
     kp = 0;
-    if(prevval >= val)
-    prevmotorspeed = -1;
+    if(prevval >= enteredVal)
+    prevMotorSpeed = -1;
     else 
-     prevmotorspeed = 12345;
+     prevMotorSpeed = 12345;
   }
-  kp -= dif;
+  kp -= linearDifference;
   if( kp < 0 ) kp = 0;
-    motorspeed = motorspeed - (optkp * error * 0.31875);
-  if (motorspeed > 255) motorspeed = 255;
-  if(motorspeed <= 0) motorspeed = 0;
-  if (motorspeed < 20 && motorspeed != 0) motorspeed = 20;
-  if(val==-1) motorspeed = 255;
+    motorSpeed = motorSpeed - (optimizedKp * error * errorFactor);
+  if (motorSpeed > UPPER_BOUND) motorSpeed = UPPER_BOUND;
+  if(motorSpeed <= 0) motorSpeed = 0;
+  if (motorSpeed < LOWER_BOUND && motorSpeed != 0) motorSpeed = LOWER_BOUND;
+  if(enteredVal==-1) motorSpeed = UPPER_BOUND;
   if(error < 0) {
-  if((rpm > prevmotorspeed/0.31875 )){
-      kp /= 3;
-      if(flagy == 0) {
-          flagy = 1;
-          optkp = kp;
+  if((rpm > prevMotorSpeed/errorFactor)){
+      kp /= nonLinearDifference;
+      if(overshootKpFlag == 0) {
+          overshootKpFlag = 1;
+          optimizedKp = kp;
       }
-      flagx = 1;
+      optimizedKpFlag = 1;
   }
   }
   if(error > 0) {
-  if(rpm < prevmotorspeed/0.31875){
-      kp /= 3;
-      if(flagy == 0) {
-          flagy = 1;
-          optkp = kp;
+  if(rpm < prevMotorSpeed/errorFactor){
+      kp /= nonLinearDifference;
+      if(overshootKpFlag == 0) {
+          overshootKpFlag = 1;
+          optimizedKp = kp;
       }
-      flagx = 1;
+      optimizedKpFlag = 1;
   }
   }
-  prevmotorspeed = motorspeed;
-  analogWrite(9, motorspeed);
+  prevMotorSpeed = motorSpeed;
+  analogWrite(9, motorSpeed);
 }
 
 void loop() {
   if (Serial.available() > 0) {
-    val = Serial.parseInt();
-    if(val != -1) valentered = 1;
-    flagy = 0;
+    enteredVal = Serial.parseInt();
+    if(enteredVal != -1) enteredValFlag = 1;
+    overshootKpFlag = 0;
     count = 0;
-    flagx = 0;
-    kp = 1;
-    if (flag == 0) {
-      motorspeed = map(val, 0, maxrpm, 0, 255);
-      flag = 1;
+    optimizedKpFlag = 0;
+    if (mapFlag == 0) {
+      motorSpeed = map(enteredVal, 0, maxRpm, 0, 255);
+      mapFlag = 1;
     }
-    time2 = 0;
-    motormap();
+    finalTime = 0;
+    motorMap();
   }
-  if (count >= x)
+  if (count >= numberOfRevolutions)
   {
-    calcrpm();
-    motormap();
+    calcRpm();
+    motorMap();
   }
-  if(maxrpm < rpm) maxrpm = rpm;
+  if(maxRpm < rpm) maxRpm = rpm;
 }
