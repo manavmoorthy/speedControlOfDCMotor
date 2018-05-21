@@ -16,11 +16,15 @@ The hardware components necessary for the implementation include:
 - Arduino Microcontroller
 - 12 V DC Motor
 - Digital IR Sensor
+
 USE: To measure the number of revolutions, by using interrupt when the flap is right in front of the IR sensor. It gives an output 1 when the motor flap is in front, covering it, else gives output 0.
 - KA 7812 Voltage Regulator
+
 USE: To regulate flow of 12 volts across the DC Motor.
 - Diode (IN4007)
+
 USE: Used to prevent back EMF in the circuit.
 - Transistor
+
 USE: Acts as a control switch
 - Resistor 
