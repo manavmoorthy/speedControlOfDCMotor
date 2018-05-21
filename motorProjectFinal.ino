@@ -77,7 +77,7 @@ void motorMap() {
   }
   }
   prevMotorSpeed = motorSpeed;
-  analogWrite(9, motorSpeed);
+  analogWrite(motorSensor, motorSpeed);
 }
 
 void loop() {
